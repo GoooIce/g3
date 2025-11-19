@@ -53,13 +53,21 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         run: |
           . $HOME/.cargo/env
-          cargo build --workspace
-          cargo test --workspace --lib --tests
+          cargo build --workspace --exclude g3-computer-control
+          cargo test --workspace --exclude g3-computer-control --lib --tests
 
-    - name: Build (Linux x86_64 / macOS)
-      if: matrix.arch != 'aarch64'
+    - name: Build (Linux x86_64)
+      if: matrix.arch != 'aarch64' && runner.os == 'Linux'
+      run: cargo build --workspace --exclude g3-computer-control
+
+    - name: Run tests (Linux x86_64)
+      if: matrix.arch != 'aarch64' && runner.os == 'Linux'
+      run: cargo test --workspace --exclude g3-computer-control --lib --tests
+
+    - name: Build (macOS)
+      if: runner.os == 'macOS'
       run: cargo build --workspace
 
-    - name: Run tests (Linux x86_64 / macOS)
-      if: matrix.arch != 'aarch64'
+    - name: Run tests (macOS)
+      if: runner.os == 'macOS'
       run: cargo test --workspace --lib --tests
