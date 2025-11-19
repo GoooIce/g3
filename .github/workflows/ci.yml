@@ -9,13 +9,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+          - os: macos-latest
     
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
+
+    - name: Set up QEMU (for aarch64 on Linux)
+      if: matrix.arch == 'aarch64' && runner.os == 'Linux'
+      uses: docker/setup-qemu-action@v3
 
     - name: Cache cargo
       uses: actions/cache@v4
@@ -24,16 +33,33 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.arch || 'x86_64' }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install system dependencies (Ubuntu)
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.arch != 'aarch64'
       run: |
         sudo apt-get update
         sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
-    - name: Build
+    - name: Build and test (Linux aarch64)
+      if: matrix.arch == 'aarch64' && runner.os == 'Linux'
+      uses: uraimo/run-on-arch-action@v2
+      with:
+        arch: aarch64
+        distro: ubuntu22.04
+        install: |
+          apt-get update
+          apt-get install -y curl build-essential libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        run: |
+          . $HOME/.cargo/env
+          cargo build --workspace
+          cargo test --workspace --lib --tests
+
+    - name: Build (Linux x86_64 / macOS)
+      if: matrix.arch != 'aarch64'
       run: cargo build --workspace
 
-    - name: Run tests
+    - name: Run tests (Linux x86_64 / macOS)
+      if: matrix.arch != 'aarch64'
       run: cargo test --workspace --lib --tests
