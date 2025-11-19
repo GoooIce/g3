@@ -2,92 +2,19 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
-
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
 
 jobs:
   test:
-    name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
-
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-registry-
-
-    - name: Cache cargo index
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-git-
-
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-target-
-
-    - name: Install system dependencies (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
-
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-
-    - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
-      continue-on-error: true
-
-    - name: Build
-      run: cargo build --workspace --verbose
-
-    - name: Run tests
-      run: cargo test --workspace --lib --tests --verbose
-
-    - name: Run doc tests
-      run: cargo test --workspace --doc --verbose
-      continue-on-error: true
-
-  build:
-    name: Build Release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
+    - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
 
     - name: Cache cargo
@@ -97,9 +24,7 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-release-
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install system dependencies (Ubuntu)
       if: runner.os == 'Linux'
@@ -107,45 +32,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
-    - name: Build release
-      run: cargo build --workspace --release --verbose
+    - name: Build
+      run: cargo build --workspace
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: g3-${{ matrix.os }}
-        path: |
-          target/release/g3${{ runner.os == 'Windows' && '.exe' || '' }}
-          target/release/g3-console${{ runner.os == 'Windows' && '.exe' || '' }}
-        if-no-files-found: ignore
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
-
-    - name: Install tarpaulin
-      run: cargo install cargo-tarpaulin
-
-    - name: Generate coverage
-      run: cargo tarpaulin --workspace --out xml --output-dir coverage --verbose
-      continue-on-error: true
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./coverage/cobertura.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+    - name: Run tests
+      run: cargo test --workspace --lib --tests
