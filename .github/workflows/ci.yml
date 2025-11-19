@@ -39,7 +39,7 @@ jobs:
       if: runner.os == 'Linux' && matrix.arch != 'aarch64'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
+        sudo apt-get install -y libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev libxtst-dev
 
     - name: Build and test (Linux aarch64)
       if: matrix.arch == 'aarch64' && runner.os == 'Linux'
@@ -49,7 +49,7 @@ jobs:
         distro: ubuntu22.04
         install: |
           apt-get update
-          apt-get install -y curl build-essential libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev
+          apt-get install -y curl build-essential libx11-dev libxdo-dev libxcb-shape0-dev libxcb-xfixes0-dev libxtst-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         run: |
           . $HOME/.cargo/env
