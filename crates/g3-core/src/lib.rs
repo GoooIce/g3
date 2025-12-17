@@ -3959,12 +3959,14 @@ impl<W: UiWriter> Agent<W> {
                                 for msg in self.context_window.conversation_history.iter().rev() {
                                     if matches!(msg.role, MessageRole::Assistant) {
                                         // Try to parse tool calls from the message content
-                                        if msg.content.contains(r#"\"tool\""#) {
+                                        if msg.content.contains(r#""tool":"#) || msg.content.contains(r#""tool" :"#) {
                                             // Simple JSON extraction for tool calls
                                             let content = &msg.content;
                                             let mut start_idx = 0;
-                                            while let Some(tool_start) =
-                                                content[start_idx..].find(r#"{\"tool\""#)
+                                            while let Some(tool_start) = content[start_idx..].find(r#"{"tool":"#)
+                                                .or_else(|| content[start_idx..].find(r#"{"tool" :"#))
+                                                .or_else(|| content[start_idx..].find(r#"{ "tool":"#))
+                                                .or_else(|| content[start_idx..].find(r#"{ "tool" :"#))
                                             {
                                                 let tool_start = start_idx + tool_start;
                                                 // Find the end of this JSON object
