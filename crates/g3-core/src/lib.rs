@@ -378,6 +378,8 @@ impl StreamingToolParser {
                                             "Successfully parsed valid JSON tool call: {:?}",
                                             tool_call
                                         );
+                                        // Remove the parsed JSON from text_buffer to prevent re-parsing
+                                        self.text_buffer = self.text_buffer[..start_pos].to_string();
                                         // Reset JSON parsing state
                                         self.in_json_tool_call = false;
                                         self.json_tool_start = None;
@@ -4086,9 +4088,6 @@ impl<W: UiWriter> Agent<W> {
                                 .replace("[/INST]", "")
                                 .replace("<</SYS>>", "");
 
-                            // Store the raw content BEFORE filtering for the context window log
-                            let raw_content_for_log = clean_content.clone();
-
                             // Filter out JSON tool calls from the display
                             let filtered_content =
                                 fixed_filter_json::fixed_filter_json_tool_calls(&clean_content);
@@ -4245,14 +4244,14 @@ impl<W: UiWriter> Agent<W> {
                                 }
                             }
 
-                            // Add the tool call and result to the context window using RAW unfiltered content
-                            // This ensures the log file contains the true raw content including JSON tool calls
-                            let tool_message = if !raw_content_for_log.trim().is_empty() {
+                            // Add the tool call and result to the context window
+                            // Use filtered_content to avoid duplicating JSON tool calls that were already in the text
+                            let tool_message = if !final_display_content.is_empty() {
                                 Message::new(
                                     MessageRole::Assistant,
                                     format!(
                                         "{}\n\n{{\"tool\": \"{}\", \"args\": {}}}",
-                                        raw_content_for_log.trim(),
+                                        final_display_content,
                                         tool_call.tool,
                                         tool_call.args
                                     ),
