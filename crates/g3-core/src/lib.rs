@@ -1305,7 +1305,7 @@ impl<W: UiWriter> Agent<W> {
         for (name, openai_config) in &config.providers.openai_compatible {
             if should_register(name, "default") {
                 let openai_provider = g3_providers::OpenAIProvider::new_with_name(
-                    name.clone(),
+                    format!("{}.default", name),
                     openai_config.api_key.clone(),
                     Some(openai_config.model.clone()),
                     openai_config.base_url.clone(),
